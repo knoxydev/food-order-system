@@ -9,20 +9,6 @@ import (
 )
 
 
-var numeric_keyboard = tgbotapi.NewInlineKeyboardMarkup(
-	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonURL("1.com", "http://1.com"),
-		tgbotapi.NewInlineKeyboardButtonData("2", "2"),
-		tgbotapi.NewInlineKeyboardButtonData("3", "3"),
-	),
-	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("4", "4"),
-		tgbotapi.NewInlineKeyboardButtonData("5", "5"),
-		tgbotapi.NewInlineKeyboardButtonData("6", "6"),
-	),
-)
-
-
 func bot_start() {
 	bot, err := tgbotapi.NewBotAPI(bot_token)
 	if err != nil { log.Panic(err) }
@@ -32,30 +18,62 @@ func bot_start() {
 	u.Timeout = 60
 	updates := bot.GetUpdatesChan(u)
 
+
 	log.Printf("authorized on account %s", bot.Self.UserName)
 
+
 	for update := range updates {
-		if update.Message == nil { continue }
-		if !update.Message.IsCommand() { continue }
+		if update.Message != nil {
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
+
+			switch update.Message.Command() {
+				case "start":
+					msg.Text = "This is a FOOD_ORDER_SYSTEM"
+					msg.ReplyMarkup = numeric_keyboard
+
+				case "menu": msg.Text = "[MENU]"
+				default: msg.Text = "[ERR] I don't know that command"
+			}
+
+			if _, err := bot.Send(msg); err != nil { log.Panic(err) }
+
+		} else if update.CallbackQuery != nil {
+
+			// Respond to the callback query, telling Telegram to show the user a message with the data received
+			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
+			if _, err := bot.Request(callback); err != nil { panic(err) }
+			// And finally, send a message containing the data received.
+			//msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
+			//if _, err := bot.Send(msg); err != nil { panic(err) }
 
 
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
+			some_kyb := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "")
 
+			switch update.CallbackQuery.Data {
+				case "menu:1":
+					some_kyb.Text = "➜ LAVASH"
+					some_kyb.ReplyMarkup = lavash_keyboard
+				case "menu:2":
+					some_kyb.Text = "➜ BURGERS"
+					some_kyb.ReplyMarkup = burger_keyboard
+				case "menu:3":
+					some_kyb.Text = "➜ KEBAB"
+					some_kyb.ReplyMarkup = kebab_keyboard
+				case "menu:4":
+					some_kyb.Text = "➜ PIZZA"
+					some_kyb.ReplyMarkup = pizza_keyboard
+				case "menu:5":
+					some_kyb.Text = "➜ DRINKS"
+					some_kyb.ReplyMarkup = drinks_keyboard
+			}
 
-		switch update.Message.Command() {
-			case "start":
-				msg.Text = "This is a FOOD_ORDER_SYSTEM"
+			if _, err := bot.Send(some_kyb); err != nil { log.Panic(err) }
 
-				msg.ReplyMarkup = numeric_keyboard
-
-			case "menu":
-				msg.Text = "[MENU]"
-				//log.Printf("[MENU] %s", update.Message.Text)
-
-			default: msg.Text = "[ERR] I don't know that command"
+			// log.Printf("\n--------------")
+			// log.Println(update.CallbackQuery.Data)
+			// log.Printf("--------------\n")
 		}
 
-		if _, err := bot.Send(msg); err != nil { log.Panic(err) }
 	}
 }
 
